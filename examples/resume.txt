@@ -1,0 +1,18 @@
+John Doe
+john.doe@email.com
+(123) 456-7890
+
+Skills:
+- Python development
+- Machine learning
+- Docker
+- Git version control
+
+Experience:
+2018-2023 Senior Developer at Tech Corp
+- Led development of ML applications
+- Managed cloud infrastructure
+
+Education:
+2014-2018 Bachelor's in Computer Science
+University of Technology 

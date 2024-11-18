@@ -141,4 +141,41 @@ class ResumeParser:
         import re
         phone_pattern = r'\b(?:\+\d{1,2}\s?)?\(?\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{4}\b'
         match = re.search(phone_pattern, text)
-        return match.group(0) if match else "" 
+        return match.group(0) if match else ""
+
+    def _extract_degree(self, text: str) -> str:
+        """
+        Extract degree information from education section text
+        """
+        # Basic degree keywords to look for
+        degree_keywords = [
+            'B.Tech', 'B.E.', 'Bachelor', 'M.Tech', 'M.E.', 'Master',
+            'PhD', 'Diploma', 'HSC', 'SSLC'
+        ]
+        
+        for degree in degree_keywords:
+            if degree.lower() in text.lower():
+                return degree
+        
+        return 'Not specified'
+
+    def _extract_institution(self, text: str) -> str:
+        """Extract institution name from education section text"""
+        # Common education institution keywords
+        institution_keywords = ['university', 'college', 'institute', 'school']
+        
+        # Split text into lines and look for lines containing institution keywords
+        for line in text.split('\n'):
+            if any(keyword in line.lower() for keyword in institution_keywords):
+                return line.strip()
+        
+        return 'Not specified'
+
+    def _extract_year(self, text: str) -> str:
+        """Extract year from education section text"""
+        import re
+        # Look for year patterns (e.g., 2020, 2015-2019)
+        year_pattern = r'(19|20)\d{2}(?:\s*-\s*(19|20)\d{2})?'
+        match = re.search(year_pattern, text)
+        return match.group(0) if match else 'Not specified'
+        

@@ -1,0 +1,12 @@
+Senior Software Engineer
+
+Required Skills:
+- Python programming
+- SQL databases
+- AWS cloud services
+- Docker containerization
+- Machine learning experience
+
+Qualifications:
+- Bachelor's degree in Computer Science
+- 5+ years of software development experience 

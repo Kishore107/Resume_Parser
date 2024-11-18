@@ -7,85 +7,82 @@ class ResumeMatcher:
         self.vectorizer = TfidfVectorizer()
 
     def calculate_match(self, resume_data: Dict, job_data: Dict) -> Dict:
-        """
-        Calculate match score between resume and job description
-        """
-        # Calculate different aspect scores
+        """Calculate the match between resume and job description"""
+        # Calculate skill match
         skill_score = self._calculate_skill_match(
             resume_data['skills'],
             job_data['required_skills']
         )
         
-        qualification_score = self._calculate_qualification_match(
-            resume_data['education'],
-            job_data['qualifications']
-        )
-        
-        experience_score = self._calculate_experience_match(
-            resume_data['experience'],
-            job_data['experience']
-        )
-
-        # Calculate overall score
-        overall_score = (skill_score * 0.5 + 
-                        qualification_score * 0.3 + 
-                        experience_score * 0.2)
-
-        return {
-            'overall_score': overall_score,
-            'skill_score': skill_score,
-            'qualification_score': qualification_score,
-            'experience_score': experience_score,
-            'missing_skills': self._identify_missing_skills(
-                resume_data['skills'],
-                job_data['required_skills']
-            ),
-            'suggestions': self._generate_suggestions(
-                resume_data,
-                job_data
-            )
-        }
-
-    def _calculate_skill_match(self, resume_skills: List[str], 
-                             required_skills: List[str]) -> float:
-        """Calculate skill match score"""
-        if not required_skills:
-            return 1.0
-            
-        matched_skills = set(resume_skills) & set(required_skills)
-        return len(matched_skills) / len(required_skills)
-
-    def _calculate_qualification_match(self, resume_quals: List[Dict],
-                                    required_quals: List[str]) -> float:
-        """Calculate qualification match score"""
-        # Implementation details to be added
-        return 0.0
-
-    def _calculate_experience_match(self, resume_exp: List[Dict],
-                                  required_exp: Dict) -> float:
-        """Calculate experience match score"""
-        # Implementation details to be added
-        return 0.0
-
-    def _identify_missing_skills(self, resume_skills: List[str],
-                               required_skills: List[str]) -> List[str]:
-        """Identify skills missing from resume"""
-        return list(set(required_skills) - set(resume_skills))
-
-    def _generate_suggestions(self, resume_data: Dict,
-                            job_data: Dict) -> List[str]:
-        """Generate improvement suggestions"""
-        suggestions = []
-        
-        # Add missing skills suggestion
+        # Get missing skills
         missing_skills = self._identify_missing_skills(
             resume_data['skills'],
             job_data['required_skills']
         )
+        
+        # Generate suggestions based on analysis
+        suggestions = self._generate_suggestions(resume_data, job_data)
+        
+        return {
+            'overall_score': skill_score,
+            'missing_skills': missing_skills,
+            'suggestions': suggestions
+        }
+
+    def _calculate_skill_match(self, resume_skills: List[str], required_skills: List[str]) -> float:
+        """Calculate skill match score"""
+        if not required_skills:
+            return 1.0
+        
+        # Convert all skills to lowercase for comparison
+        resume_skills = [skill.lower() for skill in resume_skills]
+        required_skills = [skill.lower() for skill in required_skills]
+        
+        matched_skills = set(resume_skills) & set(required_skills)
+        return len(matched_skills) / len(required_skills)
+
+    def _identify_missing_skills(self, resume_skills: List[str], required_skills: List[str]) -> List[str]:
+        """Identify skills missing from resume"""
+        # Convert all skills to lowercase for comparison
+        resume_skills = [skill.lower() for skill in resume_skills]
+        required_skills = [skill.lower() for skill in required_skills]
+        
+        # Find missing skills
+        missing = set(required_skills) - set(resume_skills)
+        return list(missing)
+
+    def _generate_suggestions(self, resume_data: Dict, job_data: Dict) -> List[str]:
+        """Generate improvement suggestions"""
+        suggestions = []
+        
+        # Check for missing skills
+        missing_skills = self._identify_missing_skills(
+            resume_data['skills'],
+            job_data['required_skills']
+        )
+        
         if missing_skills:
             suggestions.append(
-                f"Consider adding these missing skills: {', '.join(missing_skills)}"
+                f"Consider adding these key skills to your resume: {', '.join(missing_skills)}"
             )
-            
-        # Add more specific suggestions based on other criteria
+        
+        # Add suggestion about skill count
+        if len(resume_data['skills']) < 5:
+            suggestions.append(
+                "Your resume could benefit from listing more relevant skills"
+            )
+        
+        # Add suggestion about experience
+        if 'experience' in job_data and 'experience' in resume_data:
+            if len(resume_data['experience']) < 2:
+                suggestions.append(
+                    "Consider adding more detailed work experience to your resume"
+                )
+        
+        # If no suggestions were generated, add a positive note
+        if not suggestions:
+            suggestions.append(
+                "Your resume appears to be well-matched with the job requirements"
+            )
+        
         return suggestions 
