@@ -78,19 +78,67 @@ class ResumeParser:
 
     def _extract_experience(self, text: str) -> List[Dict]:
         """Extract work experience entries"""
-        # This is a basic implementation that can be enhanced
-        doc = self.nlp(text)
+        import re
         experiences = []
         
-        # Implementation details to be added
+        # Look for date patterns and job titles
+        date_pattern = r'(\d{4})\s*-\s*(\d{4}|present)'
+        
+        # Split text into sections
+        sections = text.split('\n\n')
+        for section in sections:
+            date_match = re.search(date_pattern, section, re.IGNORECASE)
+            if date_match:
+                experiences.append({
+                    'period': date_match.group(0),
+                    'description': section.strip(),
+                    'company': self._extract_company(section),
+                    'title': self._extract_job_title(section)
+                })
+        
         return experiences
 
     def _extract_education(self, text: str) -> List[Dict]:
         """Extract education information"""
-        # Implementation details to be added
-        return []
+        education = []
+        
+        # Common education keywords
+        edu_keywords = ["bachelor", "master", "phd", "degree", "university", "college"]
+        
+        # Split text into sections
+        sections = text.split('\n\n')
+        for section in sections:
+            if any(keyword in section.lower() for keyword in edu_keywords):
+                education.append({
+                    'degree': self._extract_degree(section),
+                    'institution': self._extract_institution(section),
+                    'year': self._extract_year(section)
+                })
+        
+        return education
 
     def _extract_certifications(self, text: str) -> List[str]:
         """Extract certification information"""
         # Implementation details to be added
-        return [] 
+        return []
+
+    def _extract_name(self, doc) -> str:
+        """Extract name using NER"""
+        for ent in doc.ents:
+            if ent.label_ == "PERSON":
+                return ent.text
+        return ""
+
+    def _extract_email(self, text: str) -> str:
+        """Extract email using regex"""
+        import re
+        email_pattern = r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b'
+        match = re.search(email_pattern, text)
+        return match.group(0) if match else ""
+
+    def _extract_phone(self, text: str) -> str:
+        """Extract phone number using regex"""
+        import re
+        phone_pattern = r'\b(?:\+\d{1,2}\s?)?\(?\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{4}\b'
+        match = re.search(phone_pattern, text)
+        return match.group(0) if match else "" 

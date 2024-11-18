@@ -9,8 +9,8 @@ def main(resume_path, job_description_path):
     matcher = ResumeMatcher()
     
     # Parse resume and job description
-    resume_data = resume_parser.parse_resume(resume_path)
-    job_data = job_parser.parse_job_description(job_description_path)
+    resume_data = resume_parser.parse_resume('/Users/kishore/Downloads/J KISHORE KUMAR RESUME.pdf')
+    job_data = job_parser.parse_job_description('/Users/kishore/Downloads/file.txt')
     
     # Calculate match and get feedback
     match_results = matcher.calculate_match(resume_data, job_data)

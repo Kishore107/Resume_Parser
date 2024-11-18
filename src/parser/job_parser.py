@@ -68,6 +68,17 @@ class JobParser:
         }
 
     def _extract_skill_tokens(self, doc) -> List[str]:
-        """Helper method to extract skill tokens from text"""
-        # Implementation details to be added
-        return [] 
+        """Extract skill tokens from text"""
+        skills = []
+        # Common skill-related keywords
+        skill_keywords = ["proficient", "experience with", "knowledge of", "skilled in"]
+        
+        for token in doc:
+            if any(keyword in token.text.lower() for keyword in skill_keywords):
+                # Get the next noun chunk as potential skill
+                for chunk in token.doc.noun_chunks:
+                    if chunk.start > token.i and chunk.start <= token.i + 5:
+                        skills.append(chunk.text.strip().lower())
+        
+        return list(set(skills))
+  
