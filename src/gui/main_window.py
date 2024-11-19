@@ -189,29 +189,38 @@ class MainWindow(QMainWindow):
 
             # Format results with HTML for better display
             results_text = f"""
-            <div style='background-color: white; padding: 20px; border-radius: 10px;'>
-                <h2 style='color: #2f3542;'>Match Results</h2>
-                <div style='background-color: {'#2ecc71' if match_results['overall_score'] > 0.7 else '#e74c3c'}; 
-                          color: white; 
-                          padding: 10px; 
-                          border-radius: 5px;
-                          margin: 10px 0;'>
-                    <h3>Overall Score: {match_results['overall_score']:.2%}</h3>
-                </div>
-                
-                <h3 style='color: #2f3542; margin-top: 20px;'>Missing Skills:</h3>
-                <ul style='color: #e74c3c;'>
-                {"".join(f"<li>{skill}</li>" for skill in match_results['missing_skills'])}
-                </ul>
+            <h3>Match Analysis Results</h3>
+            
+            <h4>Overall Score: {match_results['overall_score']:.2%}</h4>
+            
+            <h4>Detailed Scores:</h4>
+            <ul>
+                <li>Skills Match: {match_results['detailed_scores']['skill_match']:.2%}</li>
+                <li>Experience Match: {match_results['detailed_scores']['experience_match']:.2%}</li>
+                <li>Education Match: {match_results['detailed_scores']['education_match']:.2%}</li>
+                <li>Semantic Match: {match_results['detailed_scores']['semantic_match']:.2%}</li>
+            </ul>
 
-                <h3 style='color: #2f3542; margin-top: 20px;'>Suggestions:</h3>
-                <ul style='color: #546de5;'>
-                {"".join(f"<li>{suggestion}</li>" for suggestion in match_results['suggestions'])}
-                </ul>
-            </div>
+            <h4>Skill Gaps by Category:</h4>
+            <ul>
             """
             
-            # Set text with HTML formatting
+            for category, skills in match_results['skill_gaps_by_category'].items():
+                category_name = category.replace('_', ' ').title()
+                results_text += f"<li><b>{category_name}:</b> {', '.join(skills)}</li>"
+            
+            results_text += """
+            </ul>
+
+            <h4>Improvement Suggestions:</h4>
+            <ul>
+            """
+            
+            for suggestion in match_results['suggestions']:
+                results_text += f"<li>{suggestion}</li>"
+            
+            results_text += "</ul>"
+            
             self.results_label.setText(results_text)
             self.results_label.setTextFormat(Qt.TextFormat.RichText)
 
