@@ -1,115 +1,90 @@
-from typing import Dict, List, Set
-from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.metrics.pairwise import cosine_similarity
-import spacy
-import numpy as np
-import google.generativeai as genai
-import json
-
-class ResumeMatcher:
-    def __init__(self, api_key: str = None):
-        self.api_key = api_key
-        if self.api_key:
-            genai.configure(api_key=self.api_key)
-            self.model = genai.GenerativeModel('gemini-pro')
-
-    def calculate_match(self, resume_data: Dict, job_data: Dict) -> Dict:
-        """Calculate the match between resume and job description using Gemini AI"""
-        if not self.api_key:
-            raise ValueError("API key is required for analysis")
-
-        # Convert resume and job data to text
-        resume_text = self._dict_to_text(resume_data)
-        job_text = self._dict_to_text(job_data)
-
-        # Create analysis prompt
-        prompt = f"""You are a professional resume analyzer. Compare this resume against the job description and provide a detailed analysis.
-        
-        Resume:
-        {resume_text}
-
-        Job Description:
-        {job_text}
-
-        Provide your analysis in the following format:
-        MATCH_PERCENTAGE: (number between 0-100)
-        MISSING_SKILLS: (comma-separated list)
-        MISSING_QUALIFICATIONS: (comma-separated list)
-        SUGGESTIONS: (one suggestion per line, start each with '-')
-        """
-
-        try:
-            response = self.model.generate_content(prompt)
-            response_text = response.text.strip()
-            
-            # Parse the response
-            analysis = self._parse_gemini_response(response_text)
-            
-            return {
-                'overall_score': analysis['match_percentage'] / 100,
-                'detailed_scores': {
-                    'skill_match': self._calculate_skill_match_percentage(analysis['missing_skills']),
-                    'experience_match': 0.7,
-                    'education_match': 0.7,
-                    'semantic_match': analysis['match_percentage'] / 100
-                },
-                'missing_skills': analysis['missing_skills'],
-                'skill_gaps_by_category': {'technical': analysis['missing_skills']},
-                'suggestions': analysis['suggestions']
-            }
-        except Exception as e:
-            print(f"Gemini API error: {str(e)}")
-            return self._generate_fallback_response()
-
-    def _dict_to_text(self, data: Dict) -> str:
-        """Convert dictionary data to formatted text"""
-        return '\n'.join(f"{k}: {v}" for k, v in data.items())
-
-    def _calculate_skill_match_percentage(self, missing_skills: List[str]) -> float:
-        """Calculate skill match percentage based on missing skills"""
-        # Simple calculation - can be enhanced
-        return 1.0 if not missing_skills else 0.7
-
-    def _generate_fallback_response(self) -> Dict:
-        """Generate a fallback response when API fails"""
-        return {
-            'overall_score': 0.5,
-            'detailed_scores': {
-                'skill_match': 0.5,
-                'experience_match': 0.5,
-                'education_match': 0.5,
-                'semantic_match': 0.5
-            },
-            'missing_skills': ['Unable to analyze skills'],
-            'skill_gaps_by_category': {'technical': ['Analysis failed']},
-            'suggestions': ['Unable to generate suggestions due to API error']
-        }
-
-    def _parse_gemini_response(self, response_text: str) -> Dict:
-        """Parse the formatted response from Gemini"""
-        try:
-            lines = response_text.split('\n')
-            analysis = {
-                'match_percentage': 0,
-                'missing_skills': [],
-                'missing_qualifications': [],
-                'suggestions': []
-            }
-            
-            for line in lines:
-                line = line.strip()
-                if line.startswith('MATCH_PERCENTAGE:'):
-                    analysis['match_percentage'] = float(line.split(':')[1].strip())
-                elif line.startswith('MISSING_SKILLS:'):
-                    skills = line.split(':')[1].strip()
-                    analysis['missing_skills'] = [s.strip() for s in skills.split(',') if s.strip()]
-                elif line.startswith('MISSING_QUALIFICATIONS:'):
-                    quals = line.split(':')[1].strip()
-                    analysis['missing_qualifications'] = [q.strip() for q in quals.split(',') if q.strip()]
-                elif line.startswith('-'):
-                    analysis['suggestions'].append(line[1:].strip())
-            
-            return analysis
-        except Exception as e:
-            print(f"Error parsing Gemini response: {str(e)}")
-            raise
+from typing import Dict, List, Set
+import spacy
+import numpy as np
+import google.generativeai as genai
+
+class ResumeMatcher:
+    def __init__(self, api_key: str = None):
+        self.nlp = spacy.load("en_core_web_sm")
+        if api_key:
+            genai.configure(api_key=api_key)
+            self.model = genai.GenerativeModel('gemini-pro')
+        
+    def _calculate_text_similarity(self, text1: str, text2: str) -> float:
+        """Calculate similarity between two texts using spaCy"""
+        doc1 = self.nlp(text1.lower())
+        doc2 = self.nlp(text2.lower())
+        return doc1.similarity(doc2)
+
+    def _extract_skills(self, text: str) -> Set[str]:
+        """Extract skills from text"""
+        doc = self.nlp(text.lower())
+        # Simple skill extraction based on noun chunks
+        skills = {chunk.text for chunk in doc.noun_chunks}
+        return skills
+
+    def calculate_match(self, resume_data: Dict, job_data: Dict) -> Dict:
+        """Calculate match between resume and job description"""
+        resume_text = resume_data.get('full_text', '').lower()
+        job_text = job_data.get('full_text', '').lower()
+
+        # Extract skills
+        resume_skills = self._extract_skills(resume_text)
+        job_skills = self._extract_skills(job_text)
+        
+        # Calculate skill match
+        matching_skills = resume_skills.intersection(job_skills)
+        missing_skills = job_skills - resume_skills
+        skill_match_score = len(matching_skills) / len(job_skills) if job_skills else 0
+
+        # Calculate semantic similarity
+        semantic_match = self._calculate_text_similarity(resume_text, job_text)
+
+        # Use AI to analyze experience and education match
+        prompt = f"""
+        Analyze the match between this resume and job description:
+        
+        Resume:
+        {resume_text}
+        
+        Job Description:
+        {job_text}
+        
+        Provide:
+        1. Experience match score (0-1)
+        2. Education match score (0-1)
+        3. List of key missing skills by category
+        4. Specific improvement suggestions
+        
+        Format as JSON with keys: experience_match, education_match, skill_gaps_by_category, suggestions
+        """
+
+        ai_response = self.model.generate_content(prompt)
+        try:
+            ai_analysis = eval(ai_response.text)
+        except:
+            ai_analysis = {
+                'experience_match': 0.5,
+                'education_match': 0.5,
+                'skill_gaps_by_category': {'technical': list(missing_skills)},
+                'suggestions': ['Consider adding more specific technical skills']
+            }
+
+        # Calculate overall score
+        detailed_scores = {
+            'skill_match': skill_match_score,
+            'experience_match': ai_analysis.get('experience_match', 0.5),
+            'education_match': ai_analysis.get('education_match', 0.5),
+            'semantic_match': semantic_match
+        }
+        
+        overall_score = np.mean(list(detailed_scores.values()))
+
+        return {
+            'overall_score': overall_score,
+            'detailed_scores': detailed_scores,
+            'matching_skills': list(matching_skills),
+            'missing_skills': list(missing_skills),
+            'skill_gaps_by_category': ai_analysis.get('skill_gaps_by_category', {}),
+            'suggestions': ai_analysis.get('suggestions', [])
+        }
