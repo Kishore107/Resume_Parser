@@ -1,7 +1,8 @@
 from PyQt6.QtWidgets import (QMainWindow, QWidget, QVBoxLayout, QPushButton, 
-                         QLabel, QFileDialog, QMessageBox, QFrame, QScrollArea)
+                         QLabel, QFileDialog, QMessageBox, QFrame, QScrollArea, QLineEdit)
 from PyQt6.QtCore import Qt, QSize
 from PyQt6.QtGui import QFont, QColor, QPalette
+from pathlib import Path
 
 class StyleSheet:
     MAIN_STYLE = """
@@ -41,127 +42,141 @@ class StyleSheet:
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
+        self.api_key = None
+        self.resume_path = None
+        self.job_path = None
         self.init_ui()
 
     def init_ui(self):
         # Set window properties
         self.setWindowTitle("Resume Parser")
-        self.setGeometry(100, 100, 800, 600)
+        self.setGeometry(100, 100, 600, 400)
         self.setStyleSheet(StyleSheet.MAIN_STYLE)
 
         # Create main widget and layout
         main_widget = QWidget()
         self.setCentralWidget(main_widget)
         layout = QVBoxLayout(main_widget)
-        layout.setSpacing(20)
-        layout.setContentsMargins(30, 30, 30, 30)
+        layout.setAlignment(Qt.AlignmentFlag.AlignTop)
 
-        # Create header
-        header_label = QLabel("Resume Parser")
-        header_label.setStyleSheet("""
-            font-size: 24px;
-            font-weight: bold;
-            color: #2f3542;
-            padding: 20px;
-        """)
-        layout.addWidget(header_label, alignment=Qt.AlignmentFlag.AlignTop)
-
-        # Create upload section frame
-        upload_frame = QFrame()
-        upload_layout = QVBoxLayout(upload_frame)
+        # API Key section
+        api_label = QLabel("Enter Google API Key:")
+        self.api_input = QLineEdit()
+        self.api_input.setEchoMode(QLineEdit.EchoMode.Password)
+        self.api_submit = QPushButton("Submit API Key")
+        self.api_submit.clicked.connect(self.submit_api_key)
         
-        # Resume upload section
-        self.resume_label = QLabel("📄 No resume file selected")
-        self.resume_button = QPushButton("Upload Resume")
-        self.resume_button.setIcon(self.style().standardIcon(self.style().StandardPixmap.SP_FileIcon))
-        upload_layout.addWidget(self.resume_label)
-        upload_layout.addWidget(self.resume_button)
+        layout.addWidget(api_label)
+        layout.addWidget(self.api_input)
+        layout.addWidget(self.api_submit)
 
-        # Add some spacing
-        upload_layout.addSpacing(20)
+        # Add spacing
+        layout.addSpacing(20)
+
+        # Resume upload section
+        self.resume_label = QLabel("No resume file selected")
+        self.resume_button = QPushButton("Upload Resume")
+        self.resume_button.clicked.connect(self.upload_resume)
+        self.resume_button.setEnabled(False)  # Disabled until API key is provided
+        layout.addWidget(self.resume_label)
+        layout.addWidget(self.resume_button)
+
+        # Add spacing
+        layout.addSpacing(20)
 
         # Job description upload section
-        self.job_label = QLabel("📋 No job description file selected")
+        self.job_label = QLabel("No job description file selected")
         self.job_button = QPushButton("Upload Job Description")
-        self.job_button.setIcon(self.style().standardIcon(self.style().StandardPixmap.SP_FileIcon))
-        upload_layout.addWidget(self.job_label)
-        upload_layout.addWidget(self.job_button)
+        self.job_button.clicked.connect(self.upload_job)
+        self.job_button.setEnabled(False)  # Disabled until API key is provided
+        layout.addWidget(self.job_label)
+        layout.addWidget(self.job_button)
 
-        layout.addWidget(upload_frame)
+        # Add spacing
+        layout.addSpacing(20)
 
         # Analyze button
         self.analyze_button = QPushButton("Analyze Match")
-        self.analyze_button.setStyleSheet("""
-            background-color: #2ecc71;
-            font-weight: bold;
-        """)
+        self.analyze_button.clicked.connect(self.analyze)
+        self.analyze_button.setEnabled(False)  # Disabled until API key is provided
         layout.addWidget(self.analyze_button)
 
-        # Create results frame with scroll area
-        results_frame = QFrame()
-        results_layout = QVBoxLayout(results_frame)
-        
-        scroll_area = QScrollArea()
-        scroll_area.setWidgetResizable(True)
-        scroll_area.setFrameShape(QFrame.Shape.NoFrame)
-        
-        results_widget = QWidget()
+        # Results label
         self.results_label = QLabel("")
         self.results_label.setWordWrap(True)
-        self.results_label.setStyleSheet("""
-            background-color: white;
-            border-radius: 10px;
-            padding: 20px;
-        """)
-        
-        results_widget_layout = QVBoxLayout(results_widget)
-        results_widget_layout.addWidget(self.results_label)
-        scroll_area.setWidget(results_widget)
-        results_layout.addWidget(scroll_area)
-        
-        layout.addWidget(results_frame)
+        layout.addWidget(self.results_label)
 
-        # Connect buttons
-        self.resume_button.clicked.connect(self.upload_resume)
-        self.job_button.clicked.connect(self.upload_job)
-        self.analyze_button.clicked.connect(self.analyze)
+    def submit_api_key(self):
+        api_key = self.api_input.text().strip()
+        if not api_key:
+            QMessageBox.warning(
+                self,
+                "Invalid API Key",
+                "Please enter a valid Google API Key."
+            )
+            return
 
-        # Initialize file paths
-        self.resume_path = None
-        self.job_path = None
+        # Here you could add validation of the API key if needed
+        self.api_key = api_key
         
-        # Initially disable analyze button
-        self.analyze_button.setEnabled(False)
+        # Enable the upload buttons
+        self.resume_button.setEnabled(True)
+        self.job_button.setEnabled(True)
+        self.analyze_button.setEnabled(True)
+        
+        QMessageBox.information(
+            self,
+            "Success",
+            "API Key submitted successfully. You can now upload files."
+        )
 
     def upload_resume(self):
+        if not self.api_key:
+            QMessageBox.warning(
+                self,
+                "API Key Required",
+                "Please submit your Google API Key first."
+            )
+            return
+
         file_path, _ = QFileDialog.getOpenFileName(
             self,
-            "Select Resume File",
+            "Select Resume",
             "",
-            "All Files (*);;PDF Files (*.pdf);;Word Files (*.docx);;Text Files (*.txt)"
+            "Documents (*.pdf *.docx *.txt)"
         )
         if file_path:
             self.resume_path = file_path
-            self.resume_label.setText(f"📄 Resume selected: {file_path.split('/')[-1]}")
-            self._update_analyze_button()
+            self.resume_label.setText(f"Resume selected: {Path(file_path).name}")
 
     def upload_job(self):
+        if not self.api_key:
+            QMessageBox.warning(
+                self,
+                "API Key Required",
+                "Please submit your Google API Key first."
+            )
+            return
+
         file_path, _ = QFileDialog.getOpenFileName(
             self,
-            "Select Job Description File",
+            "Select Job Description",
             "",
-            "All Files (*);;Text Files (*.txt)"
+            "Documents (*.pdf *.docx *.txt)"
         )
         if file_path:
             self.job_path = file_path
-            self.job_label.setText(f"📋 Job description selected: {file_path.split('/')[-1]}")
-            self._update_analyze_button()
-
-    def _update_analyze_button(self):
-        """Enable analyze button only when both files are selected"""
-        self.analyze_button.setEnabled(bool(self.resume_path and self.job_path))
+            self.job_label.setText(f"Job description selected: {Path(file_path).name}")
 
     def analyze(self):
+        if not self.api_key:
+            QMessageBox.warning(
+                self,
+                "API Key Required",
+                "Please submit your Google API Key first."
+            )
+            return
+
         if not self.resume_path or not self.job_path:
             QMessageBox.warning(
                 self,
@@ -175,10 +190,10 @@ class MainWindow(QMainWindow):
             from ..parser.job_parser import JobParser
             from ..analyzer.matcher import ResumeMatcher
 
-            # Initialize parsers and matcher
+            # Initialize parsers and matcher with API key
             resume_parser = ResumeParser()
             job_parser = JobParser()
-            matcher = ResumeMatcher()
+            matcher = ResumeMatcher(api_key=self.api_key)  # Pass API key to matcher
 
             # Parse files
             resume_data = resume_parser.parse_resume(self.resume_path)
