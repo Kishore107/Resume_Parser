@@ -1,22 +1,36 @@
 # Resume Parser
 
-An intelligent Resume Parser application that helps job seekers optimize their resumes by comparing them against job descriptions. The application provides a user-friendly GUI interface and detailed analysis of resume-job matches.
+**Resume Parser** is an intelligent application that extracts, processes, and organizes information from resumes. This tool is designed to help recruiters and hiring managers streamline the resume analysis process by providing structured data for better decision-making.
 
 ## Features
 
-- **Document Support**: Parse resumes in multiple formats (PDF, DOCX, TXT)
-- **Skill Analysis**: Identify and extract skills from both resumes and job descriptions
-- **Match Scoring**: Calculate compatibility scores between resumes and job requirements
-- **Missing Skills**: Highlight skills required by the job but missing from the resume
-- **Smart Suggestions**: Receive personalized recommendations for resume improvement
-- **User-Friendly Interface**: Easy-to-use GUI for file uploads and result visualization
+- Extracts essential details such as:
+  - Candidate's name
+  - Contact information
+  - Education background
+  - Work experience
+  - Skills and certifications
+- Supports resumes in various formats (PDF, DOCX, etc.)
+- Utilizes Natural Language Processing (NLP) for accurate data extraction.
+- User-friendly interface for uploading resumes and viewing parsed results.
+- Generates JSON outputs for easy integration with other platforms.
+
+## Technologies Used
+
+- **Programming Language**: Python
+- **Frameworks and Libraries**:
+  - Flask (for the web interface)
+  - Spacy (for NLP tasks)
+  - PyPDF2 and python-docx (for document parsing)
+  - Pandas (for structured data manipulation)
+- **Deployment**: Dockerized for easy scalability and compatibility.
 
 ## Installation
 
 1. Clone the repository:
-
-
-git clone https://github.com/yourusername/resume-parser.git
+   ```bash
+   git clone https://github.com/Kishore107/Resume_Parser.git
+   cd Resume_Parser
 
 
 2. Create and activate a virtual environment:
@@ -96,135 +110,3 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 - spaCy for NLP capabilities
 - Google Gemini for AI analysis
 - PyQt6 for the GUI framework
-
-from typing import Dict, List, Set
-
-import spacy
-
-
-import google.generativeai as genai
-
-
-
-class ResumeMatcher:
-
-    def __init__(self, api_key: str = None):
-
-        self.nlp = spacy.load("en_core_web_sm")
-
-        if api_key:
-
-            genai.configure(api_key=api_key)
-
-            self.model = genai.GenerativeModel('gemini-pro')
-
-        
-
-
-        """Calculate similarity between two texts using spaCy"""
-
-        doc1 = self.nlp(text1.lower())
-
-        doc2 = self.nlp(text2.lower())
-
-        return doc1.similarity(doc2)
-
-
-
-    def _extract_skills(self, text: str) -> Set[str]:
-
-        """Extract skills from text"""
-
-        doc = self.nlp(text.lower())
-
-        # Simple skill extraction based on noun chunks
-
-        skills = {chunk.text for chunk in doc.noun_chunks}
-
-        return skills
-
-
-
-    def calculate_match(self, resume_data: Dict, job_data: Dict) -> Dict:
-
-        """Calculate match between resume and job description"""
-
-        resume_text = resume_data.get('full_text', '').lower()
-
-        job_text = job_data.get('full_text', '').lower()
-
-
-
-
-        resume_skills = self._extract_skills(resume_text)
-
-        job_skills = self._extract_skills(job_text)
-
-        
-
-        # Calculate skill match
-
-        matching_skills = resume_skills.intersection(job_skills)
-
-        missing_skills = job_skills - resume_skills
-
-        skill_match_score = len(matching_skills) / len(job_skills) if job_skills else 0
-
-
-
-        # Calculate semantic similarity
-
-        semantic_match = self._calculate_text_similarity(resume_text, job_text)
-
-
-
-        # Use AI to analyze experience and education match
-
-        prompt = f"""
-
-        Analyze the match between this resume and job description:
-
-
-```
-from PyQt6.QtWidgets import (QMainWindow, QWidget, QVBoxLayout, QPushButton, 
-                         QLabel, QFileDialog, QMessageBox, QFrame, QScrollArea, QLineEdit)
-from PyQt6.QtCore import Qt, QSize
-from PyQt6.QtGui import QFont, QColor, QPalette
-from pathlib import Path
-
-class StyleSheet:
-    MAIN_STYLE = """
-    QMainWindow {
-        background-color: #f5f6fa;
-    }
-    QLabel {
-        color: #2f3542;
-        font-size: 14px;
-        padding: 10px;
-    }
-    QPushButton {
-        background-color: #546de5;
-        color: white;
-        border: none;
-        padding: 10px 20px;
-        border-radius: 5px;
-        font-size: 14px;
-        min-width: 200px;
-    }
-    QPushButton:hover {
-        background-color: #574bd6;
-    }
-    QPushButton:pressed {
-        background-color: #3c40c6;
-    }
-    QPushButton:disabled {
-        background-color: #a4b0be;
-    }
-    QFrame {
-        background-color: white;
-        border-radius: 10px;
-        padding: 20px;
-    }
-    """
-```
-
